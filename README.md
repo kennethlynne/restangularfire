@@ -1,0 +1,4 @@
+restangularfire
+===============
+
+Custom CQRS provider 
