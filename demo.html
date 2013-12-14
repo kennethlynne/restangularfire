@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+</head>
+<body ng-app="DemoApp">
+
+<div class="wrapper" ng-controller="DemoCtrl">
+    <input type="text" ng-model="data.test"/>
+    <button ng-click="data.$save()">Lagre</button>
+</div>
+
+
+<script src="bower_components/angular/angular.js"></script>
+<script src="https://cdn.firebase.com/v0/firebase.js"></script>
+<script src="bower_components/angularfire/angularfire.js"></script>
+<script src="restangularfire.js"></script>
+<script>
+    angular.module('DemoApp', ['kennethlynne.restangularfire'])
+            .controller('DemoCtrl', function ($scope, Firebase, restangularFire) {
+
+                var dataRef = new Firebase("https://firerest.firebaseio.com");
+
+                var get = restangularFire.get(dataRef);
+                get().then(function (model) {
+                    console.log(model);
+                    model.$bind($scope,'data');
+                });
+
+            })
+
+
+</script>
+</body>
+</html>

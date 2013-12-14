@@ -10,7 +10,8 @@ describe('Provider: restangularFire', function(){
         });
     });
 
-    it('Should render the directive', function(){
+    it('Should be tested', function(){
+        expect(true).toBeFalsy();
     });
 
 });
