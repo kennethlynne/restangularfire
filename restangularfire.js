@@ -5,17 +5,17 @@ angular.module('kennethlynne.restangularfire', ['firebase'])
 
         };
 
-        this.$get = function ($firebase, firebaseRef, $q, $log, $parse) {
+        this.$get = function ($firebase, firebaseRef, $q) {
 
             /**
-             * Creates a binder
+             * Creates a model that stays in sync with the server
              * @param fbRef
-             * @returns {Function} modelBinder
+             * @returns {Object} model with $save, $add, $remove, $bind and $set methods
              */
             var modelFactory = function(fbRef) {
 
                 /**
-                 * This will keep a local model on scope.attr in sync with external server.
+                 * This will keep a local model on scope.attr in sync with an external server.
                  */
                 var item = $firebase(fbRef);
 
@@ -60,9 +60,10 @@ angular.module('kennethlynne.restangularfire', ['firebase'])
             /**
              * getFactory takes a firebase reference and returns a get function
              * @param fbRef firebase reference
+             * @param force return a reference even if it does not exist yet server side
              * @returns {Function}
              */
-            var getFactory = function (fbRef) {
+            var getFactory = function (fbRef, force) {
 
                 /**
                  * Curried get function
@@ -73,7 +74,7 @@ angular.module('kennethlynne.restangularfire', ['firebase'])
                     var _deferred = $q.defer();
 
                     fbRef.once('value', function (snapshot) {
-                        if (snapshot.val() == null) {
+                        if (!force && snapshot.val() == null) {
                             _deferred.reject('Object not found');
                         }
 
