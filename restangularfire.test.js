@@ -181,7 +181,7 @@ describe('restangularFireAuth', function() {
 
         it('should invoke callback if error',
             inject(function(restangularFireAuth, $timeout, $firebaseAuth) {
-                var cb = jasmine.createSpy(), undefined;
+                var cb = jasmine.createSpy();
                 customSpy($firebaseAuth.fns, '$createUser', function(email, pass, cb) {
                     cb('joy!');
                 });
