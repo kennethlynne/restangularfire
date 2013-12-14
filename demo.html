@@ -21,11 +21,10 @@
 
                 var dataRef = new Firebase("https://firerest.firebaseio.com");
 
-                var get = restangularFire.get(dataRef);
-                get().then(function (model) {
+                restangularFire.get(dataRef).then(function (model) {
                     console.log(model);
                     model.$bind($scope,'data');
-                });
+                })
 
             })
 
