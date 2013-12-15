@@ -17,13 +17,12 @@
 <script src="restangularfire.js"></script>
 <script>
     angular.module('DemoApp', ['kennethlynne.restangularfire'])
-            .controller('DemoCtrl', function ($scope, Firebase, restangularFire) {
+            .controller('DemoCtrl', function ($scope, firebaseRef, restangularFire) {
 
-                var dataRef = new Firebase("https://firerest.firebaseio.com");
+                var dataRef = firebaseRef("https://firerest.firebaseio.com");
 
                 restangularFire.get(dataRef).then(function (model) {
-                    console.log(model);
-                    model.$bind($scope,'data');
+                    $scope.data = model;
                 })
 
             })

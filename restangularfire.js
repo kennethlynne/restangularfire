@@ -63,6 +63,7 @@ angular.module('kennethlynne.restangularfire', ['firebase'])
              * @param fbRef firebase reference
              * @param force return a reference even if it does not exist yet server side
              * @returns {Function}
+             * @param modelOverrides key value pairs of overrides for $save, $set, $add, $remove and $bind
              */
             var getFactory = function (fbRef, force, modelOverrides) {
 
