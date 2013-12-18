@@ -10,10 +10,10 @@ angular.module('kennethlynne.restangularfire', ['firebase'])
             /**
              * Creates a model that stays in sync with the server
              * @param fbRef the firebase reference
-             * @param modelOverrides override the default methods ($save, $add, $remove, $bind and $set)
+             * @param modelDecorator override the default methods ($save, $add, $remove, $bind and $set)
              * @returns {Object} model with $save, $add, $remove, $bind and $set methods
              */
-            var modelFactory = function (fbRef, modelOverrides) {
+            var modelFactory = function (fbRef, modelDecorator) {
 
                 /**
                  * This will keep a local model on scope.attr in sync with an external server.
@@ -28,21 +28,7 @@ angular.module('kennethlynne.restangularfire', ['firebase'])
 
                 //TODO: Override to send stripped down items via REST
 
-                item.$save = function () {
-                    _save();
-                };
-
-                item.$add = function () {
-                    _add();
-                };
-
-                item.$remove = function () {
-                    _remove();
-                };
-
-                item.$set = function () {
-                    _set();
-                };
+                modelDecorator(item);
 
                 item.$bind = function ($scope, attr) {
                     _bind($scope, attr);

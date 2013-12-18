@@ -1,12 +1,24 @@
 describe('Provider: restangularFire', function(){
 
-    var $rootScope, firebase;
+    var $rootScope, firebaseRef, $firebase, restangularFire;
 
     beforeEach(function(){
-        module('kennethlynne.restangularfire');
 
-        inject(function(_$rootScope_){
+        $firebase = function () {
+            return {
+                $save: jasmine.createSpy('$firebase.$save'),
+                $add: jasmine.createSpy('$firebase.$add'),
+                $remove: jasmine.createSpy('$firebase.$remove')
+            }
+        }
+
+        module('kennethlynne.restangularfire', function ($provide) {
+            $provide.value('$firebase', $firebase);
+        });
+
+        inject(function(_$rootScope_, _restangularFire_){
             $rootScope = _$rootScope_;
+            restangularFire = _restangularFire_;
         });
     });
 
@@ -14,6 +26,20 @@ describe('Provider: restangularFire', function(){
         expect(true).toBeFalsy();
     });
 
+    it('should override model', function() {
+        var saveSpy = jasmine.createSpy('save');
+        var addSpy = jasmine.createSpy('add');
+
+        var fbRef = function () {
+            
+        }
+        fbRef.once = function (event, cb) {
+            expect(event).toBe('value');
+            cb();
+        }
+
+        var result = restangularFire.get(fbRef, true, {$save:saveSpy, $add:addSpy});
+    });
 });
 
 describe('Factory: firebaseRef', function () {
