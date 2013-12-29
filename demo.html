@@ -6,8 +6,10 @@
 <body ng-app="DemoApp">
 
 <div class="wrapper" ng-controller="DemoCtrl">
-    <input type="text" ng-model="data.test"/>
-    <button ng-click="data.$save()">Lagre</button>
+    {{data | json}}
+    <input type="text" ng-model="tag"/>
+    <p ng-repeat="tag in data.tags">{{tag}}</p>
+    <button ng-click="data.$add(tag)">Add</button>
 </div>
 
 
@@ -17,13 +19,24 @@
 <script src="restangularfire.js"></script>
 <script>
     angular.module('DemoApp', ['kennethlynne.restangularfire'])
-            .controller('DemoCtrl', function ($scope, firebaseRef, restangularFire) {
+            .config(function (restangularFireProvider) {
+                //ndc.azurewebsites.net
+                restangularFireProvider.setAPIBase('http://localhost:58649/api');
+            })
+            .controller('DemoCtrl', function ($scope, firebaseRef, restangularFire, $http) {
 
-                var dataRef = firebaseRef("https://firerest.firebaseio.com");
+                var dataRef = firebaseRef("https://ndc.firebaseio.com/videos/0");
 
-                restangularFire.get(dataRef).then(function (model) {
+                var successCb = function (model) {
+                    console.log('Great success');
                     $scope.data = model;
-                })
+                };
+
+                var errorCb = function () {
+                    alert('Meh');
+                };
+
+                restangularFire.get(dataRef, {}, true).then(successCb, errorCb);
 
             })
 

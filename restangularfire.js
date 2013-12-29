@@ -1,11 +1,17 @@
 angular.module('kennethlynne.restangularfire', ['firebase'])
     .provider('restangularFire', function () {
 
-        this.config = function () {
+        var apiBase = null;
 
+        this.setAPIBase = function (url) {
+            apiBase = url;
         };
 
-        this.$get = function ($firebase, firebaseRef, $q) {
+        function assertConfigured() {
+            if(apiBase == null) throw 'You need to configure restangularFire with an API url';
+        }
+
+        this.$get = function ($firebase, firebaseRef, $q, $http) {
 
             /**
              * Creates a model that stays in sync with the server
@@ -25,20 +31,42 @@ angular.module('kennethlynne.restangularfire', ['firebase'])
                 _set = item.$set,
                 _add = item.$add;
 
-                //TODO: Override to send stripped down items via REST
+                var url = fbRef.toString();
+                var matches = url.match(/http(s)?\:\/\/[a-zA-Z0-9\.-]+\.com(\/)?(.*)$/);
 
-                modelDecorator(item);
+                if (!matches || !matches[3] || !matches[3].length > 0) {
+                    throw 'Unexpeted path. Got ' + url;
+                }
 
-                item.$bind = function ($scope, attr) {
-                    _bind($scope, attr);
-//                    var local = $parse(attr)($scope);
-//
-//                    var unbind = $scope.$watch(attr, function (newVal) {
-//                        console.log(newVal);
-//                    }, true);
-//
-//                    $scope.$on('$destroy', unbind);
-                };
+                var path = matches[3];
+                var itemAPIUrl = apiBase + '/' + path;
+
+                function save() {
+                    //Remove all properties beginning with $
+                    var data = angular.fromJson(angular.toJson(item));
+
+                    $http.put(itemAPIUrl, data);
+                }
+
+                function add() {
+                    //Remove all properties beginning with $
+                    var data = angular.fromJson(angular.toJson(item));
+
+                    $http.post(itemAPIUrl, data);
+                }
+
+                item.$save = save;
+                item.$add = add;
+                item.$_path = path;
+
+                if(typeof modelDecorator == 'object')
+                {
+                    angular.extend(item, modelDecorator);
+                }
+                else if(typeof modelDecorator == 'function')
+                {
+                    modelDecorator(item);
+                }
 
                 return item;
             };
@@ -50,7 +78,8 @@ angular.module('kennethlynne.restangularfire', ['firebase'])
              * @returns {Function}
              * @param modelOverrides key value pairs of overrides for $save, $set, $add, $remove and $bind
              */
-            var getFactory = function (fbRef, force, modelOverrides) {
+            var getFactory = function (fbRef, modelOverrides, force) {
+                assertConfigured();
 
                 /**
                  * Curried get function
@@ -60,10 +89,9 @@ angular.module('kennethlynne.restangularfire', ['firebase'])
                 var _deferred = $q.defer();
 
                 fbRef.once('value', function (snapshot) {
-                    if (!force && snapshot.val() == null) {
+                    if (!force && !!snapshot && !!snapshot.val && snapshot.val() == null) {
                         _deferred.reject('Object not found');
                     }
-
                     _deferred.resolve( modelFactory(fbRef, modelOverrides) );
                 });
 
@@ -80,62 +108,7 @@ angular.module('kennethlynne.restangularfire', ['firebase'])
     })
     .factory('firebaseRef', function (Firebase) {
         return function (path) {
-            return new Firebase(path);
+            var ref = new Firebase(path);
+            return ref;
         }
-    })
-    .factory('restangularFireAuth', function ($rootScope, $firebaseAuth, firebaseRef, $timeout) {
-        var auth = null;
-        return {
-            init: function (path) {
-                return auth = $firebaseAuth(firebaseRef(), {path: path});
-            },
-
-            login: function (email, pass, callback) {
-                assertAuth();
-                auth.$login('password', {
-                    email: email,
-                    password: pass,
-                    rememberMe: true
-                }).then(function (user) {
-                        callback && callback(null, user);
-                    }, callback);
-            },
-
-            logout: function () {
-                assertAuth();
-                auth.$logout();
-            },
-
-            //TODO: Use REST API
-            changePassword: function (opts) {
-                assertAuth();
-                var cb = opts.callback || function () {
-                };
-                if (!opts.oldpass || !opts.newpass) {
-                    $timeout(function () {
-                        cb('Please enter a password');
-                    });
-                }
-                else if (opts.newpass !== opts.confirm) {
-                    $timeout(function () {
-                        cb('Passwords do not match');
-                    });
-                }
-                else {
-                    auth.$changePassword(opts.email, opts.oldpass, opts.newpass, cb);
-                }
-            },
-
-            //TODO: Use REST API
-            createAccount: function (email, pass, callback) {
-                assertAuth();
-                auth.$createUser(email, pass, callback);
-            }
-        };
-
-        function assertAuth() {
-            if (auth === null) {
-                throw new Error('Must call restangularFireAuth.init() before using its methods');
-            }
-        }
-    })
+    });

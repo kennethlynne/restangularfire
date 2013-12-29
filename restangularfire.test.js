@@ -1,8 +1,26 @@
 describe('Provider: restangularFire', function(){
 
-    var $rootScope, firebaseRef, $firebase, restangularFire;
+    var $rootScope, firebaseRef, $firebase, restangularFire, snapshot, $httpBackend;
 
     beforeEach(function(){
+
+        firebaseRef = function () {
+
+        };
+
+        firebaseRef.once = function (event, cb) {
+            expect(event).toBe('value');
+
+            cb(snapshot);
+        };
+
+        firebaseRef.toString = function () {
+            return 'https://firebasehost.firebaseio.com/child1/child2/thing';
+        }
+
+        snapshot = {
+            val: jasmine.createSpy('snapshot.val').andReturn(null)
+        };
 
         $firebase = function () {
             return {
@@ -10,35 +28,102 @@ describe('Provider: restangularFire', function(){
                 $add: jasmine.createSpy('$firebase.$add'),
                 $remove: jasmine.createSpy('$firebase.$remove')
             }
-        }
+        };
 
-        module('kennethlynne.restangularfire', function ($provide) {
+        module('kennethlynne.restangularfire', function ($provide, restangularFireProvider) {
             $provide.value('$firebase', $firebase);
+            restangularFireProvider.setAPIBase('http://api.base.com');
         });
 
-        inject(function(_$rootScope_, _restangularFire_){
+        inject(function(_$rootScope_, _restangularFire_, _$httpBackend_){
             $rootScope = _$rootScope_;
             restangularFire = _restangularFire_;
+            $httpBackend = _$httpBackend_;
         });
     });
 
-    it('Should be tested', function(){
-        expect(true).toBeFalsy();
+    afterEach(function () {
+        $httpBackend.verifyNoOutstandingExpectation();
+        $httpBackend.verifyNoOutstandingRequest();
     });
 
-    it('should override model', function() {
+    it('should throw an error if not exists', function() {
+        var successsCb = jasmine.createSpy('successCb');
+        var errorCb = jasmine.createSpy('errorCb');
+        var finallyCb = jasmine.createSpy('finally');
+
+        var result = restangularFire.get(firebaseRef).then(successsCb, errorCb).finally(finallyCb);
+        $rootScope.$digest();
+
+        expect(successsCb).not.toHaveBeenCalled();
+        expect(errorCb).toHaveBeenCalled();
+        expect(finallyCb).toHaveBeenCalled();
+    });
+
+    it('should not throw an error if not exists but force is enabled', function() {
+        var successsCb = jasmine.createSpy('successCb');
+        var errorCb = jasmine.createSpy('errorCb');
+        var finallyCb = jasmine.createSpy('finally');
+
+        snapshot = jasmine.createSpy('snapshot.val').andReturn('Firebase data');
+
+        var result = restangularFire.get(firebaseRef).then(successsCb, errorCb).finally(finallyCb);
+        $rootScope.$digest();
+
+        expect(successsCb).toHaveBeenCalled();
+        expect(errorCb).not.toHaveBeenCalled();
+        expect(finallyCb).toHaveBeenCalled();
+    });
+
+    it('should override model if passed an object', function() {
         var saveSpy = jasmine.createSpy('save');
         var addSpy = jasmine.createSpy('add');
+        var finallyCb = jasmine.createSpy('finally');
 
-        var fbRef = function () {
-            
-        }
-        fbRef.once = function (event, cb) {
-            expect(event).toBe('value');
-            cb();
-        }
+        snapshot = jasmine.createSpy('snapshot.val').andReturn('Firebase data');
+        var item = null;
 
-        var result = restangularFire.get(fbRef, true, {$save:saveSpy, $add:addSpy});
+        restangularFire.get(firebaseRef, {$save:saveSpy, $add:addSpy}).then(function (response) {
+            item = response;
+        }).finally(finallyCb);
+        $rootScope.$digest();
+        expect(finallyCb).toHaveBeenCalled();
+
+        item.$save();
+        expect(saveSpy).toHaveBeenCalled();
+
+        item.$add();
+        expect(saveSpy).toHaveBeenCalled();
+    });
+
+    it('should attach the items path to the item', function() {
+        snapshot = jasmine.createSpy('snapshot.val').andReturn('Firebase data');
+        var item = null;
+        restangularFire.get(firebaseRef).then(function (response) {
+            item = response;
+        });
+        $rootScope.$digest();
+
+        expect(item.$_path).toBe('child1/child2/thing');
+    });
+
+    it('should do a put to passed url on save', function() {
+        var finallyCb = jasmine.createSpy('finally');
+
+        snapshot = jasmine.createSpy('snapshot.val').andReturn('Firebase data');
+        var item = null;
+
+        restangularFire.get(firebaseRef).then(function (response) {
+            item = response;
+        }).finally(finallyCb);
+        $rootScope.$digest();
+
+        expect(finallyCb).toHaveBeenCalled();
+
+        $httpBackend.expectPUT('http://api.base.com/child1/child2/thing', {data:'data'}).respond(200,'YEAH');
+        item.data = 'data';
+        item.$save();
+        $httpBackend.flush();
     });
 });
 
@@ -61,173 +146,4 @@ describe('Factory: firebaseRef', function () {
         var ref = firebaseRef('url');
         expect(ref._url).toBe('url');
     });
-});
-
-describe('restangularFireAuth', function() {
-
-    beforeEach(module('kennethlynne.restangularfire', function($provide) {
-        $provide.value('Firebase', firebaseStub());
-        $provide.value('$location', stub('path'));
-        $provide.value('$firebaseAuth', angularAuthStub());
-        $provide.value('firebaseRef', firebaseStub());
-    }));
-
-    describe('#login', function() {
-        it('should return error if $firebaseAuth.$login fails',
-            inject(function($q, $rootScope, restangularFireAuth, $firebaseAuth) {
-                var cb = jasmine.createSpy();
-                restangularFireAuth.init('/login');
-                $firebaseAuth.fns.$login.andReturn(reject($q, 'test_error'));
-                restangularFireAuth.login('test@test.com', '123', cb);
-                $rootScope.$apply();
-                expect(cb).toHaveBeenCalledWith('test_error');
-            })
-        );
-
-        it('should return user if $firebaseAuth.$login succeeds',
-            inject(function(restangularFireAuth, $firebaseAuth, $rootScope, $q) {
-                var cb = jasmine.createSpy();
-                restangularFireAuth.init('/login');
-                $firebaseAuth.fns.$login.andReturn(resolve($q, {hello: 'world'}));
-                restangularFireAuth.login('test@test.com', '123', cb);
-                $rootScope.$apply();
-                expect(cb).toHaveBeenCalledWith(null, {hello: 'world'});
-            })
-        );
-    });
-
-    describe('#logout', function() {
-        it('should invoke $firebaseAuth.$logout()', function() {
-            inject(function(restangularFireAuth, $firebaseAuth) {
-                restangularFireAuth.init('/login');
-                restangularFireAuth.logout();
-                expect($firebaseAuth.fns.$logout).toHaveBeenCalled();
-            });
-        });
-    });
-
-    describe('#changePassword', function() {
-        beforeEach(inject(function($timeout, $firebaseAuth) {
-            customSpy($firebaseAuth.fns, '$changePassword', function(eml, op, np, cb) { $timeout(function() { cb(null); }) });
-        }));
-
-        it('should fail if old password is missing',
-            inject(function(restangularFireAuth, $firebaseAuth, $timeout) {
-                var cb = jasmine.createSpy();
-                restangularFireAuth.init('/login');
-                restangularFireAuth.changePassword({
-                    newpass: 123,
-                    confirm: 123,
-                    callback: cb
-                });
-                flush($timeout);
-                expect(cb).toHaveBeenCalledWith('Please enter a password');
-                expect($firebaseAuth.fns.$changePassword).not.toHaveBeenCalled();
-            })
-        );
-
-        it('should fail if new password is missing',
-            inject(function(restangularFireAuth, $firebaseAuth, $timeout) {
-                var cb = jasmine.createSpy();
-                restangularFireAuth.init('/login');
-                restangularFireAuth.changePassword({
-                    oldpass: 123,
-                    confirm: 123,
-                    callback: cb
-                });
-                flush($timeout);
-                expect(cb).toHaveBeenCalledWith('Please enter a password');
-                expect($firebaseAuth.fns.$changePassword).not.toHaveBeenCalled();
-            })
-        );
-
-        it('should fail if passwords don\'t match',
-            inject(function(restangularFireAuth, $firebaseAuth, $timeout) {
-                var cb = jasmine.createSpy();
-                restangularFireAuth.init('/login');
-                restangularFireAuth.changePassword({
-                    oldpass: 123,
-                    newpass: 123,
-                    confirm: 124,
-                    callback: cb
-                });
-                flush($timeout);
-                expect(cb).toHaveBeenCalledWith('Passwords do not match');
-                expect($firebaseAuth.fns.$changePassword).not.toHaveBeenCalled();
-            })
-        );
-
-        it('should fail if $firebaseAuth fails',
-            inject(function(restangularFireAuth, $firebaseAuth, $timeout) {
-                var cb = jasmine.createSpy();
-                customSpy($firebaseAuth.fns, '$changePassword', function(email, op, np, cb) {
-                    cb(new ErrorWithCode(123, 'errr'));
-                });
-                restangularFireAuth.init('/login');
-                restangularFireAuth.changePassword({
-                    oldpass: 124,
-                    newpass: 123,
-                    confirm: 123,
-                    callback: cb
-                });
-                flush($timeout);
-                expect(cb.argsForCall[0][0].toString()).toBe('errr');
-                expect($firebaseAuth.fns.$changePassword).toHaveBeenCalled();
-            })
-        );
-
-        it('should return null if $firebaseAuth succeeds',
-            inject(function(restangularFireAuth, $firebaseAuth, $timeout) {
-                var cb = jasmine.createSpy();
-                restangularFireAuth.init('/login');
-                restangularFireAuth.changePassword({
-                    oldpass: 124,
-                    newpass: 123,
-                    confirm: 123,
-                    callback: cb
-                });
-                flush($timeout);
-                expect(cb).toHaveBeenCalledWith(null);
-                expect($firebaseAuth.fns.$changePassword).toHaveBeenCalled();
-            })
-        );
-    });
-
-    describe('#createAccount', function() {
-        beforeEach(inject(function($timeout, $firebaseAuth) {
-            customSpy($firebaseAuth.fns, '$createUser', function(eml, pass, cb) { $timeout(function() { cb(null); }) });
-        }));
-
-        it('should invoke $firebaseAuth',
-            inject(function(restangularFireAuth, $firebaseAuth) {
-                restangularFireAuth.init('/login');
-                restangularFireAuth.createAccount('test@test.com', 123);
-                expect($firebaseAuth.fns.$createUser).toHaveBeenCalled();
-            })
-        );
-
-        it('should invoke callback if error',
-            inject(function(restangularFireAuth, $timeout, $firebaseAuth) {
-                var cb = jasmine.createSpy();
-                customSpy($firebaseAuth.fns, '$createUser', function(email, pass, cb) {
-                    cb('joy!');
-                });
-                restangularFireAuth.init('/login');
-                restangularFireAuth.createAccount('test@test.com', 123, cb);
-                flush($timeout);
-                expect(cb).toHaveBeenCalledWith('joy!');
-            })
-        );
-
-        it('should invoke callback if success',
-            inject(function(restangularFireAuth, $timeout) {
-                var cb = jasmine.createSpy();
-                restangularFireAuth.init('/login');
-                restangularFireAuth.createAccount('test@test.com', 123, cb);
-                flush($timeout);
-                expect(cb).toHaveBeenCalledWith(null);
-            })
-        )
-    });
-
 });
