@@ -18,13 +18,12 @@ angular.module('kennethlynne.restangularfire', ['firebase'])
                 /**
                  * This will keep a local model on scope.attr in sync with an external server.
                  */
-                var item = $firebase(fbRef);
-
-                var _save = item.$save;
-                var _bind = item.$bind;
-                var _remove = item.$remove;
-                var _set = item.$set;
-                var _add = item.$add;
+                var item = $firebase(fbRef),
+                _save = item.$save,
+                _bind = item.$bind,
+                _remove = item.$remove,
+                _set = item.$set,
+                _add = item.$add;
 
                 //TODO: Override to send stripped down items via REST
 
@@ -69,7 +68,7 @@ angular.module('kennethlynne.restangularfire', ['firebase'])
                 });
 
                 return _deferred.promise;
-            }
+            };
 
             return {
                 get: getFactory
