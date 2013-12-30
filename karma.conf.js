@@ -16,8 +16,8 @@ module.exports = function(config) {
         'test-utils.js',
         'mocks/firebase-mock.js',
         'bower_components/angularfire/angularfire.js',
-        'restangularfire.js',
-        'restangularfire.test.js'
+        '*.src.js',
+        '*.test.js'
     ],
 
     // list of files / patterns to exclude
