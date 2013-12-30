@@ -12,7 +12,7 @@ angular.module('kennethlynne.restangularfire', ['firebase'])
             apiBase = url;
         };
 
-        this.$get = function ($firebase, firebaseRef, $q, $http) {
+        this.$get = ['$firebase', 'firebaseRef', '$q', '$http', function ($firebase, firebaseRef, $q, $http) {
 
             /**
              * Creates a model that stays in sync with the server
@@ -40,7 +40,7 @@ angular.module('kennethlynne.restangularfire', ['firebase'])
 
                 //Throw an error if there are no matches
                 if (!matches || !matches[3] || !matches[3].length > 0) {
-                    throw 'Unexpeted path. You must provide a collection name, and optionally a path. Got ' + url;
+                    throw 'Unexpected path. You must provide a collection name, and optionally a path. Got ' + url;
                 }
 
                 var path = matches[3];
@@ -136,16 +136,15 @@ angular.module('kennethlynne.restangularfire', ['firebase'])
             }
 
 
-        };
+        }];
 
         function assertConfigured() {
             if(apiBase == null) throw 'You need to configure restangularFire with an API url';
         }
 
     })
-    .factory('firebaseRef', function (Firebase) {
+    .factory('firebaseRef', ['Firebase', function (Firebase) {
         return function (path) {
-            var ref = new Firebase(path);
-            return ref;
+            return new Firebase(path);
         }
-    });
+    }]);
