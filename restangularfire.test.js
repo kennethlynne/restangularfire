@@ -107,6 +107,63 @@ describe('Provider: restangularFire', function(){
         expect(item.$_path).toBe('child1/child2/thing');
     });
 
+    it('should do a patch to passed url on save', function() {
+        var finallyCb = jasmine.createSpy('finally');
+
+        snapshot = jasmine.createSpy('snapshot.val').andReturn('Firebase data');
+        var item = null;
+
+        restangularFire.get(firebaseRef).then(function (response) {
+            item = response;
+        }).finally(finallyCb);
+        $rootScope.$digest();
+
+        expect(finallyCb).toHaveBeenCalled();
+
+        $httpBackend.expectPATCH('http://api.base.com/child1/child2/thing', {data:'data'}).respond(200,'YEAH');
+        item.data = 'data';
+        item.$save();
+        $httpBackend.flush();
+    });
+
+    it('should do a post to passed url on add', function() {
+        var finallyCb = jasmine.createSpy('finally');
+
+        snapshot = jasmine.createSpy('snapshot.val').andReturn('Firebase data');
+        var item = null;
+
+        restangularFire.get(firebaseRef).then(function (response) {
+            item = response;
+        }).finally(finallyCb);
+        $rootScope.$digest();
+
+        expect(finallyCb).toHaveBeenCalled();
+
+        $httpBackend.expectPOST('http://api.base.com/child1/child2/thing', {data:'data'}).respond(200,'YEAH');
+        item.data = 'data';
+        item.$add();
+        $httpBackend.flush();
+    });
+
+    it('should do a delete to passed url on remove', function() {
+        var finallyCb = jasmine.createSpy('finally');
+
+        snapshot = jasmine.createSpy('snapshot.val').andReturn('Firebase data');
+        var item = null;
+
+        restangularFire.get(firebaseRef).then(function (response) {
+            item = response;
+        }).finally(finallyCb);
+        $rootScope.$digest();
+
+        expect(finallyCb).toHaveBeenCalled();
+
+        $httpBackend.expectDELETE('http://api.base.com/child1/child2/thing').respond(200,'YEAH');
+        item.$remove();
+        $httpBackend.flush();
+    });
+
+
     it('should do a put to passed url on save', function() {
         var finallyCb = jasmine.createSpy('finally');
 
@@ -120,9 +177,8 @@ describe('Provider: restangularFire', function(){
 
         expect(finallyCb).toHaveBeenCalled();
 
-        $httpBackend.expectPUT('http://api.base.com/child1/child2/thing', {data:'data'}).respond(200,'YEAH');
-        item.data = 'data';
-        item.$save();
+        $httpBackend.expectPUT('http://api.base.com/child1/child2/thing').respond(200,'YEAH');
+        item.$set();
         $httpBackend.flush();
     });
 });

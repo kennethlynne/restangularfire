@@ -1,4 +1,9 @@
 angular.module('kennethlynne.restangularfire', ['firebase'])
+    .config(['$httpProvider', function($httpProvider) {
+        $httpProvider.defaults.headers.patch = {
+            'Content-Type': 'application/json;charset=utf-8'
+        }
+    }])
     .provider('restangularFire', function () {
 
         var apiBase = null;
@@ -6,10 +11,6 @@ angular.module('kennethlynne.restangularfire', ['firebase'])
         this.setAPIBase = function (url) {
             apiBase = url;
         };
-
-        function assertConfigured() {
-            if(apiBase == null) throw 'You need to configure restangularFire with an API url';
-        }
 
         this.$get = function ($firebase, firebaseRef, $q, $http) {
 
@@ -29,34 +30,66 @@ angular.module('kennethlynne.restangularfire', ['firebase'])
                 _bind = item.$bind,
                 _remove = item.$remove,
                 _set = item.$set,
-                _add = item.$add;
+                _add = item.$add,
+                _child = item.$child;
 
+                //Get the firebase references full url
                 var url = fbRef.toString();
+                //Match everything after hostname (/root/child/item)
                 var matches = url.match(/http(s)?\:\/\/[a-zA-Z0-9\.-]+\.com(\/)?(.*)$/);
 
+                //Throw an error if there are no matches
                 if (!matches || !matches[3] || !matches[3].length > 0) {
-                    throw 'Unexpeted path. Got ' + url;
+                    throw 'Unexpeted path. You must provide a collection name, and optionally a path. Got ' + url;
                 }
 
                 var path = matches[3];
                 var itemAPIUrl = apiBase + '/' + path;
 
-                function save() {
-                    //Remove all properties beginning with $
-                    var data = angular.fromJson(angular.toJson(item));
+                //Remove all properties beginning with $
+                function strip$props(input) {
+                    return angular.fromJson(angular.toJson(input));
+                }
 
-                    $http.put(itemAPIUrl, data);
+                function save() {
+                    var data = strip$props(item);
+                    var config = {
+                        url: itemAPIUrl,
+                        method: 'PATCH',
+                        data: data
+                    };
+                    $http(config);
                 }
 
                 function add() {
-                    //Remove all properties beginning with $
-                    var data = angular.fromJson(angular.toJson(item));
-
+                    var data = strip$props(item);
                     $http.post(itemAPIUrl, data);
+                }
+
+                function remove() {
+                    $http.delete(itemAPIUrl);
+                }
+
+                function set() {
+                    var data = strip$props(item);
+                    $http.put(itemAPIUrl, data);
+                }
+
+                function bind() {
+                    //TODO: Test!
+                    throw 'Bind not implemented (yet)';
+                }
+
+                function child() {
+                    //TODO: Test!
+                    return modelFactory(_child, modelDecorator);
                 }
 
                 item.$save = save;
                 item.$add = add;
+                item.$remove = remove;
+                item.$set = set;
+                item.$bind = bind;
                 item.$_path = path;
 
                 if(typeof modelDecorator == 'object')
@@ -103,6 +136,10 @@ angular.module('kennethlynne.restangularfire', ['firebase'])
             }
 
 
+        };
+
+        function assertConfigured() {
+            if(apiBase == null) throw 'You need to configure restangularFire with an API url';
         }
 
     })
